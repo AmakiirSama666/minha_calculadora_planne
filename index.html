@@ -3,10 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Calculadora de Lotes</title>
+    <title>Calculadora de Vendas</title>
     <style>
         body { font-family: sans-serif; background-color: #f4f4f4; padding: 10px; margin: 0; }
-        .container { background: white; padding: 15px; border-radius: 8px; shadow: 0 2px 5px rgba(0,0,0,0.1); }
+        .container { background: white; padding: 15px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); max-width: 600px; margin: auto; }
         h2 { text-align: center; color: #333; margin-top: 0; }
         table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
         th, td { border: 1px solid #ccc; padding: 10px; text-align: left; }
@@ -15,13 +15,27 @@
         .vlr-col { color: #555; font-size: 0.9em; }
         .total-row { font-weight: bold; background: #e9ecef; }
         .total-cell { color: #28a745; font-weight: bold; }
-        .btn-limpar { width: 100%; padding: 12px; background: #dc3545; color: white; border: none; border-radius: 4px; font-size: 16px; cursor: pointer; }
+        
+        .acoes { display: flex; gap: 10px; flex-direction: column; }
+        button { width: 100%; padding: 15px; border: none; border-radius: 4px; font-size: 16px; font-weight: bold; cursor: pointer; }
+        .btn-limpar { background: #dc3545; color: white; }
+        .btn-pdf { background: #28a745; color: white; }
+
+        /* CONFIGURAÇÃO PARA O PDF (IMPRESSÃO) */
+        @media print {
+            body { background: white; padding: 0; }
+            .container { box-shadow: none; max-width: 100%; }
+            .acoes, .btn-limpar, .btn-pdf, input { display: none; } /* Esconde botões e campos de entrada */
+            .qtd-text { display: inline !important; } /* Mostra o número digitado no PDF */
+            th, td { padding: 8px; font-size: 12px; }
+        }
+        .qtd-text { display: none; } /* Esconde o texto da quantidade na tela normal */
     </style>
 </head>
 <body>
 
 <div class="container">
-    <h2>Calculadora de Vendas</h2>
+    <h2 id="titulo">Relatório de Vendas</h2>
     <table>
         <thead>
             <tr>
@@ -31,8 +45,7 @@
                 <th>TOTAL</th>
             </tr>
         </thead>
-        <tbody id="tabela-corpo">
-            </tbody>
+        <tbody id="tabela-corpo"></tbody>
         <tfoot>
             <tr class="total-row">
                 <td colspan="3" style="text-align: right;">TOTAL GERAL:</td>
@@ -40,7 +53,11 @@
             </tr>
         </tfoot>
     </table>
-    <button class="btn-limpar" onclick="limparTudo()">LIMPAR TUDO</button>
+
+    <div class="acoes">
+        <button class="btn-pdf" onclick="gerarPDF()">GERAR PDF / IMPRIMIR</button>
+        <button class="btn-limpar" onclick="limparTudo()">LIMPAR TUDO</button>
+    </div>
 </div>
 
 <script>
@@ -59,12 +76,21 @@
         const corpo = document.getElementById('tabela-corpo');
         corpo.innerHTML = itens.map((item, index) => `
             <tr>
-                <td>**${item.nome}**</td>
-                <td><input type="number" id="qtd-${index}" min="0" value="" placeholder="0" oninput="calcular()"></td>
+                <td><strong>${item.nome}</strong></td>
+                <td>
+                    <input type="number" id="qtd-${index}" min="0" placeholder="0" oninput="atualizarTexto(${index}); calcular()">
+                    <span id="text-qtd-${index}" class="qtd-text">0</span>
+                </td>
                 <td class="vlr-col">${item.valor.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
                 <td id="total-${index}">R$ 0,00</td>
             </tr>
         `).join('');
+    }
+
+    // Função para que o número apareça no PDF (já que o campo input some)
+    function atualizarTexto(index) {
+        const qtd = document.getElementById(`qtd-${index}`).value || 0;
+        document.getElementById(`text-qtd-${index}`).innerText = qtd;
     }
 
     function calcular() {
@@ -81,9 +107,18 @@
     }
 
     function limparTudo() {
-        const inputs = document.querySelectorAll('input');
-        inputs.forEach(input => input.value = "");
-        calcular();
+        if(confirm("Deseja limpar todos os campos?")) {
+            const inputs = document.querySelectorAll('input');
+            inputs.forEach((input, index) => {
+                input.value = "";
+                document.getElementById(`text-qtd-${index}`).innerText = "0";
+            });
+            calcular();
+        }
+    }
+
+    function gerarPDF() {
+        window.print(); // Abre a função de salvar como PDF ou imprimir
     }
 
     renderizarTabela();
